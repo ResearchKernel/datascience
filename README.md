@@ -1,6 +1,6 @@
 # Datascience
 
-This reporsitory is maintaining codebase for solving our cold start recommendation systems. 
+This reporsitory is for maintaining codebase for solving our cold start recommendation systems. 
 
 # Project Structure 
 
