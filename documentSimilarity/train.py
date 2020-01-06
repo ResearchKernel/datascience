@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import sys
+import boto3
 import random
 import time
 from collections import namedtuple
@@ -13,13 +15,14 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from clean_metadata import (clean_df, parallelize_dataframe)
 
 '''
-Reading textfiles from folder and making dataframe from it 
+Reading textfiles from folder and making dataframe from it
 '''
+
 
 def Doc2vec_traning(dataframe):
     tagged_docs = []
     analyzedDocument = namedtuple('AnalyzedDocument', 'words tags')
-    for text, tags in zip(dataframe['content'].tolist(), dataframe['filename'].tolist()):
+    for text, tags in zip(dataframe['title'].tolist(), dataframe['abstract'].tolist()):
         tags = [tags]
         tagged_docs.append(analyzedDocument(text, tags))
     model = Doc2Vec(size=400  # Model initialization
@@ -56,24 +59,22 @@ def Doc2vec_traning(dataframe):
     print("Model Saved to folder")
     return model
 
-def dataframe_maker():
-    filenames = os.listdir("./data/text/")
-    dataframe_dict_list = []
-    for i in filenames[1:]:   # for excluding .DS_Store
-        dataframe_dict = {}
-        file_path = "./data/text/"+i
-        f = open(file_path, "r")
-        text = f.read()
-        dataframe_dict["filename"] = i
-        dataframe_dict["content"] = text
-        dataframe_dict_list.append(dataframe_dict)
-        f.close()
-        text = None
-    data = pd.DataFrame(dataframe_dict_list)
-    dataframe_dict_list = []
-    data = parallelize_dataframe(data.head(), clean_df)
-    return data
 
-def main_Doc2vec_traning():
-    data = dataframe_maker()
-    Doc2vec_traning(data)
+if __name__ == "__main__":
+    '''
+    S3 Configuration, all the models and data will be saved to S3. Roles and policy need to configured in AWS for S3.
+    '''
+    s3 = boto3.resource('s3')
+    S3_BUCKET = 'researchkernel-machinelearning'
+    KEY = 'models/arxivAbstractModel'
+    try:
+        # Read new data
+        data = pd.read_csv(sys.argv[1])
+        #  data cleaning
+        data = parallelize_dataframe(data, clean_df)
+        model = Doc2vec_traning(data)
+        # upload new trained model back to S3
+        s3.Bucket(S3_BUCKET).upload_file("./models/arxivAbstractModel", KEY)
+    except Exception as e:
+        print(e)
+        logging.info(e)
