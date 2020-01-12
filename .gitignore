@@ -109,3 +109,4 @@ data/2017-01-01full.csv
 models/arxiv_full_text
 models/arxiv_full_text.docvecs.vectors_docs.npy
 documentSimilarity/.vscode/settings.json
+*/models/*
